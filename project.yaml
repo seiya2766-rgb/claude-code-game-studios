@@ -25,3 +25,37 @@ framework:
 # here. `/project-settings --local <key>=<value>` writes there; `/project-settings <key>=<value>`
 # edits this file. See `.claude/docs/config-resolution.md` for the full
 # precedence order.
+
+engine:
+  name: "Unity"
+  version: "6.3 LTS"
+  language: "C#"
+  rendering: "URP"
+  physics: "PhysX"
+
+specialists:
+  code: "unity-specialist"
+  shader: "unity-shader-specialist"
+  ui: "unity-ui-specialist"
+  additional: ["unity-dots-specialist", "unity-addressables-specialist"]
+
+naming:
+  classes: PascalCase
+  variables: camelCase
+  constants: SCREAMING_SNAKE   # UNVERIFIED — not sourceable from
+                               # docs/engine-reference/unity/; confirm before relying on it
+  signals: PascalCase On<Event>
+  files: PascalCase
+  scenes: PascalCase
+
+# TODO: no Unity editor was found when this was written (cloud Linux container), so none of
+# these commands has been run. <Unity editor> is the editor executable's full path, quoted;
+# set it on the developer machine via /project-settings (and engine.path). Do not use bare
+# `Unity`: on PATH it may be a separate CLI that rejects -batchmode with exit 2.
+# `build` omits -buildTarget on purpose: its value is not sourceable from
+# docs/engine-reference/unity/, and -buildWindows64Player names the player it builds.
+commands:
+  build: '"<Unity editor>" -batchmode -quit -projectPath . -buildWindows64Player Builds/Win64/RuneBrigade.exe'
+  test: '"<Unity editor>" -batchmode -runTests -projectPath . -testPlatform EditMode -testResults test-results/editmode.xml'
+  run: 'Builds/Win64/RuneBrigade.exe -screen-width 1280 -screen-height 720 -screen-fullscreen 0'
+  smoke: '"<Unity editor>" -batchmode -quit -projectPath . -logFile -'
