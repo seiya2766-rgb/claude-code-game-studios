@@ -149,14 +149,71 @@ F1キーで奥義ゲージが満タンになります（確認用）。
 - 0.4秒の切り替え時間、2秒のスイッチストライクの長さは合っているか。
 - どの合成が一番気持ちよかったか、使われなかったのはどれか。
 
+## 7.5 野営地シーン
+
+[企画書](../design/game-concept.md)の「野営地（最初の拠点）」を組み立てます。野営地から出撃門でアリーナへ行き、終わると野営地へ戻ります。
+
+### データのアセット
+
+`Assets/RuneBrigade/Data/` に **Create > Rune Brigade** から作ります。
+
+| アセット | 設定 |
+| --- | --- |
+| `CampUnlockTable` | そのまま（決めた順番が入っている。空なら Reset） |
+| `CampLines` | そのまま（ガロたちのセリフが入っている。空なら Reset） |
+| `CampProgressStore` | unlockTable: `CampUnlockTable` |
+
+### アリーナ側の追加
+
+1. `Player` の PlayerRoleController の **progressStore** に `CampProgressStore` を入れる。解放されていない役割は1〜4キーに並ばなくなる。
+2. `Systems` に **DialogueHud** と **RunDirector** を付ける。RunDirector: store、lines、dialogue、director、spawner、player、roles、campSceneName: `Camp`。
+3. 全ウェーブを片付けるか倒れると、3秒後に野営地へ戻る。
+
+### 野営地シーン `Assets/RuneBrigade/Scenes/Camp.unity`
+
+丘の上の平らな場所（20m × 20m程度）と、坂道の入口を作ります。坂の下の遠くに、廃村の家（箱と三角屋根で十分）と霧（半透明の大きな板）を置きます。
+
+```
+Camp (CampDirector)
+├─ Fire              焚き火と名の灯の柱
+├─ Garo              CampFeatureView: Garo（present: ガロのカプセル）
+├─ Forge             CampFeatureView: Forge（present: ミルダと鍛冶台 / absent: 空のテント）
+├─ Archive           CampFeatureView: Archive（present: トトと書庫 / absent: 空のテント）
+├─ Watchtower        CampFeatureView: Watchtower（present: 直った塔 / absent: 崩れた塔）
+├─ Wardrobe          CampFeatureView: Wardrobe（present: 天幕 / absent: 何もない）
+├─ VillageMist       CampFeatureView: VillageMistCleared（absent: 霧の板）
+├─ VillageRoofs      CampColorTarget: Source = Feature、feature = VillageMistCleared
+├─ TentCloth         CampColorTarget: Source = Overall（テントの布、旗など）
+└─ Gate              DepartureGate（BoxCollider: Is Trigger、runSceneName: Arena、dialogue）
+```
+
+- CampDirector: store、lines、dialogue。views と colorTargets は空なら `Camp` の子から自動で集める。
+- `Systems` オブジェクトに **DialogueHud** と、プレイヤーの技が動くように **CombatDirector**、**FeedbackDirector** を置く（アリーナと同じ設定）。
+- プレイヤーはアリーナと同じ構成でよい。PlayerRoleController の progressStore も入れる。
+- **Build Profiles** のシーン一覧に `Camp`（先頭）と `Arena` を入れる。
+
+### 確かめること
+
+| 確かめること | 操作 |
+| --- | --- |
+| 最初の目覚め | 初回はガロのセリフが4つ流れ、ガロと出撃門以外はいない（テントは空） |
+| 最初の帰還 | 出撃門 → アリーナ → クリアか倒れる → 野営地でミルダが戻り、セリフが出る |
+| 書庫 | アリーナで敵を1体倒して戻ると、トトが戻る |
+| 狩人の解放 | 野営地で F2（エリア1のボス撃破の模擬）→ 狩人の刻印、見張り台、村の霧が晴れて屋根の色が戻る |
+| 祈祷師の解放 | F3（エリア2のボス撃破の模擬） |
+| 砕氷のヒント | 初回の出撃で、術士のまま敵を凍らせるとガロのヒントが1回だけ出る |
+| やり直し | F9 で進み具合を全部消す |
+
+進み具合は `Application.persistentDataPath` の `camp-progress.json` に保存されます。狩人と祈祷師の技はまだ無いので、解放されても1〜4キーには並びません。
+
 ## 8. テストを走らせる
 
 `Window > General > Test Runner` の **EditMode** で **Run All**。
-Coreの規則（状態、合成、切り替え、ダッシュ、クールダウン、トークン、調整式）のテストが57件あり、すべて通る想定です。
+Coreの規則（状態、合成、切り替え、ダッシュ、クールダウン、トークン、調整式、野営地の解放、発見記録）のテストが73件あり、すべて通る想定です。
 
 ## プロトタイプでやっていないこと
 
-- 狩人と祈祷師、ボス、ルーン、拠点、マップの分岐。
+- 狩人と祈祷師の技、ボス、ルーン、鍛冶台・書庫・見張り台・天幕の中身（今は表示の切り替えだけ）、マップの分岐。
 - ネットワーク。ゲームの規則は `RuneBrigade.Core` に分けてあるので、後でホスト側で動かす形にしやすくしてあります。
 - 見た目の作り込み（ローポリのモデル、合成の破片のエフェクト、UI Toolkit のHUD）。HUDは仮のIMGUIです。
 - 入力の設定アセット（Input Actions）、コントローラー対応、キー変更。

@@ -8,7 +8,9 @@ namespace RuneBrigade
     /// <summary>
     /// Owns the <see cref="RoleSwitcher"/> and the ultimate gauge, routes input to the
     /// active kit, and applies the role's health and speed multipliers.
-    /// Keys 1-4 select roles in the order of <see cref="kits"/>.
+    /// Keys 1-4 select the usable roles in the order of <see cref="kits"/>. With a
+    /// <see cref="CampProgressStore"/> assigned, roles the camp has not unlocked yet
+    /// are left out (design: Warden and Arcanist first, Hunter and Oracle later).
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class PlayerRoleController : MonoBehaviour
@@ -20,6 +22,8 @@ namespace RuneBrigade
         [SerializeField] private PlayerHealth health;
         [Tooltip("Role kits in key order (1 = first). Prototype: Warden, Arcanist.")]
         [SerializeField] private List<RoleAbilities> kits = new List<RoleAbilities>();
+        [Tooltip("Optional. When set, only roles the camp has unlocked can be used.")]
+        [SerializeField] private CampProgressStore progressStore;
 
         private RoleSwitcher _switcher;
         private UltimateGauge _gauge;
@@ -40,6 +44,15 @@ namespace RuneBrigade
         private void Awake()
         {
             if (kits.Count == 0) throw new InvalidOperationException("PlayerRoleController needs at least one role kit.");
+            if (progressStore)
+            {
+                progressStore.Load();
+                CampProgress progress = progressStore.Progress;
+                List<RoleAbilities> usable = kits.FindAll(kit => progress.IsRoleUnlocked(kit.Role));
+                if (usable.Count > 0) kits = usable;
+                else Debug.LogWarning("No role kit is unlocked in camp progress; using every kit.");
+            }
+
             var roles = new List<RoleId>();
             foreach (RoleAbilities kit in kits)
             {
